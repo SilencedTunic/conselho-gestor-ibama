@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ item.titulo }} &middot; Painel de gestão{% endblock %}
+
+{% block content %}
+<a href="{% url 'gestao_painel' %}?reuniao={{ item.reuniao_id }}" class="small text-decoration-none">
+    <i class="bi bi-arrow-left"></i> Voltar ao painel
+</a>
+
+<div class="row mt-3 g-4">
+    <div class="col-lg-7">
+        <div class="card card-ibama">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h1 class="h5 fw-bold">{{ item.titulo }}</h1>
+                    <span class="badge-status badge-{{ item.status }}">{{ item.get_status_display }}</span>
+                </div>
+                <p class="text-muted small mb-3">
+                    Enviado por {{ item.nome_solicitante }} ({{ item.email_solicitante }})
+                    &middot; {{ item.unidade.sigla }} &middot; {{ item.get_tipo_display }}
+                    &middot; {{ item.enviado_em|date:"d/m/Y H:i" }}
+                </p>
+
+                <h6 class="fw-bold">Contexto</h6>
+                <p>{{ item.contexto|linebreaks }}</p>
+
+                {% if item.link_sei %}
+                    <h6 class="fw-bold">Link / processo SEI</h6>
+                    <p><a href="{{ item.link_sei }}" target="_blank" rel="noopener">{{ item.link_sei }}</a></p>
+                {% endif %}
+
+                <p class="mb-0"><strong>Tempo solicitado:</strong> {{ item.tempo_solicitado_min }} min</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card card-ibama">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-pencil-square"></i> Analisar / deliberar</h6>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.reuniao.label }}</label>
+                        {{ form.reuniao }}
+                        <div class="form-text">{{ form.reuniao.help_text }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.status.label }}</label>
+                        {{ form.status }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.parecer_assessoria.label }}</label>
+                        {{ form.parecer_assessoria }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.observacao_decisao.label }}</label>
+                        {{ form.observacao_decisao }}
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">{{ form.tempo_confirmado_min.label }}</label>
+                            {{ form.tempo_confirmado_min }}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">{{ form.ordem_apresentacao.label }}</label>
+                            {{ form.ordem_apresentacao }}
+                        </div>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-ibama"><i class="bi bi-check2-circle"></i> Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-lg-12">
+        <div class="card card-ibama">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-1"><i class="bi bi-envelope"></i> Resumo para avisar o solicitante por e-mail</h6>
+                <p class="text-muted small mb-3">
+                    Copie o texto abaixo e cole no seu e-mail (ou clique em "Abrir no e-mail" para preencher
+                    automaticamente destinatário, assunto e mensagem no seu aplicativo padrão).
+                </p>
+                <textarea id="resumoTexto" class="form-control" rows="10" readonly>{{ resumo.texto_completo }}</textarea>
+                <div class="d-flex gap-2 mt-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="copiarResumo()">
+                        <i class="bi bi-clipboard"></i> Copiar texto
+                    </button>
+                    <a href="{{ resumo.mailto_href }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-envelope-open"></i> Abrir no e-mail
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copiarResumo() {
+    const campo = document.getElementById("resumoTexto");
+    campo.select();
+    navigator.clipboard.writeText(campo.value);
+}
+</script>
+{% endblock %}

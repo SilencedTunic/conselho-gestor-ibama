@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Entrar &middot; Painel de gestão{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card card-ibama">
+            <div class="card-body p-4">
+                <h1 class="h5 fw-bold mb-3"><i class="bi bi-shield-lock"></i> Painel de gestão</h1>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Usuário</label>
+                        <input type="text" name="username" class="form-control" required id="id_username">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Senha</label>
+                        <input type="password" name="password" class="form-control" required id="id_password">
+                    </div>
+                    {% if form.errors %}
+                        <div class="text-danger small mb-3">Usuário ou senha inválidos.</div>
+                    {% endif %}
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-ibama"><i class="bi bi-box-arrow-in-right"></i> Entrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
