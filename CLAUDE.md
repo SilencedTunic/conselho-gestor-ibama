@@ -150,15 +150,32 @@ reinventados ad hoc em templates:
 ## Deploy e infraestrutura
 
 - **Repositório:** https://github.com/SilencedTunic/conselho-gestor-ibama (branch `main`).
-- **Hospedagem:** Render (render.com), via Blueprint declarado em `render.yaml` na raiz — cria o
-  web service e um banco Postgres gratuito juntos. `SECRET_KEY` é gerada automaticamente pelo
-  Render (`generateValue: true`); `DEBUG=False` e `DATABASE_URL` já vêm ligados pelo blueprint —
-  não reconfigurar essas variáveis manualmente no painel sem necessidade.
+- **Hospedagem:** Render (render.com), via Blueprint declarado em `render.yaml` na raiz — cria só
+  o web service. `SECRET_KEY` é gerada automaticamente pelo Render (`generateValue: true`);
+  `DEBUG=False` vem fixo no blueprint.
+- **Banco de dados: Postgres gratuito no Neon (neon.tech), não no Render.** Decisão tomada em
+  2026-07-05 porque o Postgres free do próprio Render expira uns 30 dias após criado e depois é
+  **excluído definitivamente** (14 dias de carência) — inviável para um app que roda por meses
+  até migrar para a infraestrutura definitiva do Ibama. O plano free do Neon não expira. A
+  connection string do Neon fica na variável de ambiente `DATABASE_URL` do serviço no Render
+  (`sync: false` no `render.yaml` — preenchida manualmente no dashboard, nunca commitada).
+  `dj_database_url` (usado em `settings.py`) já interpreta `sslmode` na query string da connection
+  string do Neon sem nenhuma mudança de código.
+- **Superusuário do painel de gestão é criado automaticamente no deploy**, não por
+  `createsuperuser` interativo — o plano free do Render **não dá acesso a Shell/SSH** (restrito a
+  planos pagos). O `startCommand` do `render.yaml` roda `python manage.py ensure_superuser`
+  (comando em `pauta/management/commands/ensure_superuser.py`) depois do `migrate`: se as
+  variáveis de ambiente `DJANGO_SUPERUSER_USERNAME`/`DJANGO_SUPERUSER_EMAIL`/
+  `DJANGO_SUPERUSER_PASSWORD` estiverem definidas (`sync: false`, preenchidas no dashboard do
+  Render), cria o usuário se não existir ou atualiza senha/permissões se já existir —
+  idempotente, seguro rodar em todo deploy. Para resetar a senha do admin em produção, basta
+  mudar `DJANGO_SUPERUSER_PASSWORD` no dashboard do Render e fazer um novo deploy (push, ou
+  "Manual Deploy" no painel).
 - **O deploy é automático a cada push para `main`** — o Render está conectado ao GitHub e
-  redeploya sozinho (build: `pip install` + `collectstatic`; start: `migrate` + `gunicorn`, ambos
-  definidos no `render.yaml`). Por isso, **toda modificação neste projeto termina com commit +
-  push, não só a edição local** — uma mudança só "pronta no disco" não chega a lugar nenhum. Isso
-  vale tanto para código quanto para o próprio `CLAUDE.md`.
+  redeploya sozinho (build: `pip install` + `collectstatic`; start: `migrate` + `ensure_superuser`
+  + `gunicorn`, todos definidos no `render.yaml`). Por isso, **toda modificação neste projeto
+  termina com commit + push, não só a edição local** — uma mudança só "pronta no disco" não chega
+  a lugar nenhum. Isso vale tanto para código quanto para o próprio `CLAUDE.md`.
 - Fluxo de commit+push nesta máquina (Windows): o Git foi instalado via `winget`, mas o PATH da
   sessão de terminal do Claude Code não pega a atualização automaticamente — refrescar antes de
   qualquer comando `git`:
@@ -170,10 +187,6 @@ reinventados ad hoc em templates:
   ```
 - Identidade de commit configurada localmente neste repositório (não global no Windows):
   `user.name = "Ibama - Assessoria da Presidencia"`.
-- **O banco Postgres gratuito do Render expira uns 30 dias após criado** (criado em 2026-07-05 —
-  confira a data exata no dashboard do Render). Isso é esperado: o usuário deixou claro que essa
-  hospedagem é só um teste antes de migrar para a infraestrutura definitiva do Ibama, não é
-  produção permanente. Avisar o usuário se essa data estiver próxima.
 
 ## Verificação manual (jornadas testadas em 2026-07-05)
 

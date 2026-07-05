@@ -1,10 +1,17 @@
-# Blueprint do Render (https://render.com) — cria o serviço web e o banco Postgres gratuitos
-# de uma vez só. No dashboard do Render: "New +" > "Blueprint" > conectar este repositório.
+# Blueprint do Render (https://render.com) — cria o serviço web gratuito. No dashboard do
+# Render: "New +" > "Blueprint" > conectar este repositório.
 #
-# Aviso: o Postgres do plano "free" do Render é temporário (expira após um período gratuito
-# limitado, cerca de 30 dias — confira a data exata no dashboard ao criar). Combina com o uso
-# como teste antes de migrar para a infraestrutura definitiva do Ibama; não depender disso para
-# guardar dados por muito tempo sem acompanhar o aviso de expiração no painel do Render.
+# O banco Postgres NÃO é provisionado por este blueprint (o Postgres free do próprio Render
+# expira 30 dias após criado, com exclusão definitiva dos dados depois de mais 14 dias de
+# carência — inadequado para um app que roda por meses até migrar para a infra definitiva do
+# Ibama). Em vez disso, o banco é um Postgres gratuito externo no Neon (neon.tech), que não
+# expira. A connection string do Neon é colada manualmente na variável DATABASE_URL abaixo
+# (dashboard do Render > Environment), nunca commitada no repositório.
+#
+# DJANGO_SUPERUSER_USERNAME/EMAIL/PASSWORD: preenchidas manualmente no dashboard do Render.
+# No próximo deploy, o comando `ensure_superuser` (rodado no startCommand) cria ou atualiza esse
+# superusuário automaticamente — não depende de Shell/SSH, que é restrito a planos pagos do
+# Render.
 
 services:
   - type: web
@@ -12,7 +19,7 @@ services:
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
-    startCommand: "python manage.py migrate && gunicorn conselho_gestor.wsgi --log-file -"
+    startCommand: "python manage.py migrate && python manage.py ensure_superuser && gunicorn conselho_gestor.wsgi --log-file -"
     envVars:
       - key: SECRET_KEY
         generateValue: true
@@ -21,10 +28,10 @@ services:
       - key: PYTHON_VERSION
         value: "3.12.10"
       - key: DATABASE_URL
-        fromDatabase:
-          name: conselho-gestor-db
-          property: connectionString
-
-databases:
-  - name: conselho-gestor-db
-    plan: free
+        sync: false
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
