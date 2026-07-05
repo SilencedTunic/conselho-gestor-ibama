@@ -147,6 +147,34 @@ reinventados ad hoc em templates:
   PPTX/DOCX/telas estáticas): numeração de página "X de Y" e barra de rodapé fixa por slide/página
   impressa — aqui o rodapé é um elemento de layout HTML normal, sem paginação.
 
+## Deploy e infraestrutura
+
+- **Repositório:** https://github.com/SilencedTunic/conselho-gestor-ibama (branch `main`).
+- **Hospedagem:** Render (render.com), via Blueprint declarado em `render.yaml` na raiz — cria o
+  web service e um banco Postgres gratuito juntos. `SECRET_KEY` é gerada automaticamente pelo
+  Render (`generateValue: true`); `DEBUG=False` e `DATABASE_URL` já vêm ligados pelo blueprint —
+  não reconfigurar essas variáveis manualmente no painel sem necessidade.
+- **O deploy é automático a cada push para `main`** — o Render está conectado ao GitHub e
+  redeploya sozinho (build: `pip install` + `collectstatic`; start: `migrate` + `gunicorn`, ambos
+  definidos no `render.yaml`). Por isso, **toda modificação neste projeto termina com commit +
+  push, não só a edição local** — uma mudança só "pronta no disco" não chega a lugar nenhum. Isso
+  vale tanto para código quanto para o próprio `CLAUDE.md`.
+- Fluxo de commit+push nesta máquina (Windows): o Git foi instalado via `winget`, mas o PATH da
+  sessão de terminal do Claude Code não pega a atualização automaticamente — refrescar antes de
+  qualquer comando `git`:
+  ```powershell
+  $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+  git add -A
+  git commit -m "descrição objetiva da mudança"
+  git push
+  ```
+- Identidade de commit configurada localmente neste repositório (não global no Windows):
+  `user.name = "Ibama - Assessoria da Presidencia"`.
+- **O banco Postgres gratuito do Render expira uns 30 dias após criado** (criado em 2026-07-05 —
+  confira a data exata no dashboard do Render). Isso é esperado: o usuário deixou claro que essa
+  hospedagem é só um teste antes de migrar para a infraestrutura definitiva do Ibama, não é
+  produção permanente. Avisar o usuário se essa data estiver próxima.
+
 ## Verificação manual (jornadas testadas em 2026-07-05)
 
 App testado de ponta a ponta simulando solicitante, assessoria e presidente (via requisições HTTP
@@ -164,3 +192,7 @@ bug de responsividade sem checar primeiro com uma página mínima de controle.
 Sempre que uma alteração mudar a arquitetura, os models, o fluxo de status ou os comandos de
 desenvolvimento descritos acima, atualize este CLAUDE.md como parte da mesma alteração — não deixe
 para depois.
+
+**Toda alteração neste projeto (código ou este arquivo) termina com commit + push para `main`**
+(ver seção "Deploy e infraestrutura") — é isso que faz o Render atualizar o app no ar sozinho.
+Terminar uma tarefa sem esse passo deixa a mudança só local, sem efeito nenhum no link público.
