@@ -171,6 +171,14 @@ reinventados ad hoc em templates:
   idempotente, seguro rodar em todo deploy. Para resetar a senha do admin em produção, basta
   mudar `DJANGO_SUPERUSER_PASSWORD` no dashboard do Render e fazer um novo deploy (push, ou
   "Manual Deploy" no painel).
+- **Plano free do Render hiberna o serviço após ~15 min sem tráfego** — a próxima requisição
+  espera ~1 min até o container subir de novo, e nesse intervalo o navegador vê uma tela de
+  "waking up" servida pelo **proxy do Render**, antes mesmo da requisição chegar ao Django (não
+  tem opção documentada de customizar essa tela a partir do repositório). Mitigação em vigor desde
+  2026-07-06: um cronjob gratuito no cron-job.org bate na URL pública (rota `/`, `views.nova_pauta`)
+  a cada 10 minutos só para resetar o timer de inatividade do Render — qualquer requisição HTTP
+  serve para isso, não precisou de nenhum endpoint novo no app. Se a tela de "waking up" voltar a
+  aparecer, o cronjob provavelmente parou (conta expirada, etc.) — não é regressão de código.
 - **O deploy é automático a cada push para `main`** — o Render está conectado ao GitHub e
   redeploya sozinho (build: `pip install` + `collectstatic`; start: `migrate` + `ensure_superuser`
   + `gunicorn`, todos definidos no `render.yaml`). Por isso, **toda modificação neste projeto
