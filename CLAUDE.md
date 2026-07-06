@@ -61,6 +61,13 @@ autenticação/papéis porque o modelo de permissões é só "público" vs. "ass
   para essas comparações — `date.today()` lê o relógio do SO ignorando `TIME_ZONE`, o que gera
   prazo errado (até 3h de diferença) se o servidor rodar em UTC (comum em nuvem). Bug real
   encontrado e corrigido em 2026-07-05; não reintroduzir `date.today()` aqui.
+  `Reuniao.garantir_proximas_semanas()` (desde 2026-07-06) cria automaticamente as próximas 8
+  semanas de sextas-feiras como `Reuniao` (`status=ABERTA`, o default do model) sempre que
+  `nova_pauta`, `gestao_painel` ou `AcaoPautaForm` são carregados — a assessoria não precisa mais
+  cadastrar reunião nenhuma no `/admin/` no dia a dia; ela só escolhe/realoca a data de cada item
+  pelo campo `reuniao` de `AcaoPautaForm` na hora de analisar. `/admin/` continua existindo só para
+  exceções (ex.: fechar uma sexta sem reunião por feriado/recesso, mudando o `status` daquela
+  `Reuniao` específica para `FECHADA`).
 - `PautaItem` — o item de pauta em si. Guarda quem enviou (nome/e-mail, sem FK de usuário) e um
   `status` linear: `ENVIADA → EM_ANALISE → ANALISADA → (APROVADA | BACKLOG | RECUSADA)`. Em vez de
   uma tabela de histórico separada, os marcos de tempo (`enviado_em`, `analisado_em`,

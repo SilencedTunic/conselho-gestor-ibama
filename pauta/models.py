@@ -61,6 +61,14 @@ class Reuniao(models.Model):
             .first()
         )
 
+    @classmethod
+    def garantir_proximas_semanas(cls, semanas=8):
+        hoje = timezone.localdate()
+        dias_ate_sexta = (4 - hoje.weekday()) % 7  # sexta-feira = weekday 4
+        proxima_sexta = hoje + datetime.timedelta(days=dias_ate_sexta)
+        for i in range(semanas):
+            cls.objects.get_or_create(data=proxima_sexta + datetime.timedelta(weeks=i))
+
 
 class PautaItem(models.Model):
     TIPO_DELIBERATIVA = "DELIBERATIVA"

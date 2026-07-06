@@ -87,4 +87,6 @@ class AcaoPautaForm(BootstrapFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        Reuniao.garantir_proximas_semanas()
+        self.fields["reuniao"].queryset = Reuniao.objects.all().order_by("data")
         self._apply_bootstrap()

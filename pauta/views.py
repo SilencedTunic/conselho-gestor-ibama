@@ -12,6 +12,7 @@ from .resumo import montar_resumo_status
 
 
 def nova_pauta(request):
+    Reuniao.garantir_proximas_semanas()
     proxima = Reuniao.proxima_aberta()
 
     if request.method == "POST":
@@ -56,6 +57,7 @@ def acompanhar(request):
 
 @login_required
 def gestao_painel(request):
+    Reuniao.garantir_proximas_semanas()
     reunioes = Reuniao.objects.all()
     reuniao_id = request.GET.get("reuniao")
 
