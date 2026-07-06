@@ -35,7 +35,10 @@
                         <a class="nav-link {% if request.resolver_match.url_name == 'gestao_painel' %}active{% endif %}" href="{% url 'gestao_painel' %}">Painel de gestão</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'gestao_logout' %}">Sair ({{ user.username }})</a>
+                        <form method="post" action="{% url 'gestao_logout' %}" class="px-3 py-2 py-lg-0">
+                            {% csrf_token %}
+                            <button type="submit" class="nav-link btn btn-link p-0 border-0 align-baseline">Sair ({{ user.username }})</button>
+                        </form>
                     </li>
                     {% else %}
                     <li class="nav-item">

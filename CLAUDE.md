@@ -94,6 +94,10 @@ server-side:
   (`LOGIN_URL` aponta pro login customizado em `pauta/urls.py`, reaproveitando
   `django.contrib.auth`, sem sistema de senha próprio). Depois de salvar, `gestao_item_editar`
   redireciona para si mesmo (não para o painel) para que o resumo copiável já apareça atualizado.
+  **O link "Sair" em `templates/base.html` é um `<form method="post">` com botão, não uma
+  `<a href>`** — desde o Django 5.0, `LogoutView` só aceita POST (`GET` retorna
+  `405 Method Not Allowed`). Bug real em produção (Render) encontrado e corrigido em 2026-07-06 —
+  o usuário via "HTTP ERROR 405" ao clicar em Sair; não trocar de volta para link simples.
 
 **Sem envio automático de e-mail** (decisão revertida em 2026-07-05 — chegou a existir uma versão
 com `send_mail`, removida porque não havia SMTP real configurado). Em vez disso,
