@@ -12,23 +12,10 @@ from .resumo import montar_resumo_status
 
 
 def nova_pauta(request):
-    Reuniao.garantir_proximas_semanas()
-    proxima = Reuniao.proxima_aberta()
-
     if request.method == "POST":
-        if not (proxima and proxima.esta_aberta):
-            messages.error(
-                request,
-                "O prazo de submissão para a próxima reunião já encerrou. "
-                "Aguarde a abertura da pauta da próxima reunião.",
-            )
-            return redirect("nova_pauta")
-
-        form = PautaItemForm(request.POST, request.FILES)
+        form = PautaItemForm(request.POST)
         if form.is_valid():
-            item = form.save(commit=False)
-            item.reuniao = proxima
-            item.save()
+            item = form.save()
             messages.success(
                 request,
                 "Pauta enviada com sucesso! Guarde seu e-mail para acompanhar o andamento em "
@@ -38,7 +25,11 @@ def nova_pauta(request):
     else:
         form = PautaItemForm()
 
-    return render(request, "pauta/nova_pauta.html", {"form": form, "proxima": proxima})
+    return render(
+        request,
+        "pauta/nova_pauta.html",
+        {"form": form, "prazo_minimo_dias": Reuniao.PRAZO_MINIMO_DIAS},
+    )
 
 
 def acompanhar(request):

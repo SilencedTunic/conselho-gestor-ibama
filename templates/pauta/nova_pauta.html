@@ -4,27 +4,9 @@
 {% block content %}
 <div class="hero mb-4 px-3 px-md-4">
     <h1 class="h3 fw-bold"><i class="bi bi-journal-text"></i> Submissão de pauta do Conselho Gestor</h1>
-    <p class="mb-3">Envie sua sugestão de pauta para a próxima reunião com o presidente. Inclua o
-        contexto e o link ou processo SEI para facilitar a análise.</p>
-
-    {% if proxima %}
-        <span class="deadline-chip">
-            <i class="bi bi-calendar-event"></i>
-            Próxima reunião: {{ proxima.data|date:"d/m/Y" }}
-            &middot; Prazo de envio: {{ proxima.prazo_submissao|date:"d/m/Y" }}
-        </span>
-        {% if not proxima.esta_aberta %}
-            <div class="alert alert-warning mt-3 mb-0">
-                <i class="bi bi-exclamation-triangle"></i>
-                O prazo de submissão para essa reunião já encerrou.
-            </div>
-        {% endif %}
-    {% else %}
-        <div class="alert alert-warning mt-3 mb-0">
-            <i class="bi bi-exclamation-triangle"></i>
-            Não há reunião aberta para pauta no momento. Fale com a assessoria.
-        </div>
-    {% endif %}
+    <p class="mb-3">Envie sua sugestão de pauta para a reunião com o presidente. Escolha a data
+        desejada abaixo (é preciso pelo menos {{ prazo_minimo_dias }} dias de antecedência) e
+        inclua o contexto e o link ou processo SEI para facilitar a análise.</p>
 </div>
 
 <div class="row justify-content-center">
@@ -49,6 +31,11 @@
                         <div class="col-md-6">
                             <label class="form-label">{{ form.tipo.label }}</label>
                             {{ form.tipo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.reuniao.label }}</label>
+                            {{ form.reuniao }}
+                            <div class="form-text">{{ form.reuniao.help_text }}</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">{{ form.titulo.label }}</label>
@@ -78,7 +65,7 @@
                     {% endfor %}
 
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-ibama btn-lg" {% if not proxima or not proxima.esta_aberta %}disabled{% endif %}>
+                        <button type="submit" class="btn btn-ibama btn-lg">
                             <i class="bi bi-send"></i> Enviar pauta
                         </button>
                     </div>

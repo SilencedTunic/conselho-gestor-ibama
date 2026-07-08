@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 from .models import PautaItem, Reuniao, Unidade
 
@@ -11,11 +12,28 @@ class BootstrapFormMixin:
             field.widget.attrs["class"] = (existing + " " + css).strip()
 
 
+class ReuniaoChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        base = f"{obj.data.strftime('%d/%m/%Y')} (sexta-feira)"
+        if not obj.esta_aberta:
+            return f"{base} — prazo encerrado (menos de {Reuniao.PRAZO_MINIMO_DIAS} dias)"
+        return base
+
+
 class PautaItemForm(BootstrapFormMixin, forms.ModelForm):
     unidade = forms.ModelChoiceField(
         queryset=Unidade.objects.all(),
         label="Diretoria/Seccional",
         empty_label="Selecione sua unidade",
+    )
+    reuniao = ReuniaoChoiceField(
+        queryset=Reuniao.objects.none(),
+        label="Reunião desejada",
+        empty_label="Selecione a data da reunião",
+        help_text=(
+            f"É preciso escolher uma reunião com pelo menos {Reuniao.PRAZO_MINIMO_DIAS} dias de "
+            "antecedência, para dar tempo de análise da assessoria e despacho com o presidente."
+        ),
     )
 
     class Meta:
@@ -24,6 +42,7 @@ class PautaItemForm(BootstrapFormMixin, forms.ModelForm):
             "nome_solicitante",
             "email_solicitante",
             "unidade",
+            "reuniao",
             "titulo",
             "tipo",
             "contexto",
@@ -51,8 +70,22 @@ class PautaItemForm(BootstrapFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        Reuniao.garantir_proximas_semanas()
+        self.fields["reuniao"].queryset = Reuniao.objects.filter(
+            status=Reuniao.STATUS_ABERTA, data__gte=timezone.localdate()
+        ).order_by("data")
         self.fields["tempo_solicitado_min"].choices = [("", "Selecione o tempo")] + list(PautaItem.TEMPO_CHOICES)
         self._apply_bootstrap()
+
+    def clean_reuniao(self):
+        reuniao = self.cleaned_data["reuniao"]
+        if not reuniao.esta_aberta:
+            raise forms.ValidationError(
+                "Não há tempo hábil para análise e despacho com o presidente para a data "
+                f"escolhida (menos de {Reuniao.PRAZO_MINIMO_DIAS} dias de antecedência). "
+                "Escolha outra data de reunião."
+            )
+        return reuniao
 
 
 class ConsultaStatusForm(BootstrapFormMixin, forms.Form):

@@ -39,6 +39,8 @@ class Reuniao(models.Model):
     data = models.DateField(help_text="Data da reunião do Conselho Gestor (sexta-feira).")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ABERTA)
 
+    PRAZO_MINIMO_DIAS = 4
+
     class Meta:
         ordering = ["-data"]
 
@@ -47,7 +49,8 @@ class Reuniao(models.Model):
 
     @property
     def prazo_submissao(self):
-        return self.data - datetime.timedelta(days=7)
+        """Data limite (inclusive) para novas submissões de pauta para esta reunião."""
+        return self.data - datetime.timedelta(days=self.PRAZO_MINIMO_DIAS)
 
     @property
     def esta_aberta(self):

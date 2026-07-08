@@ -30,6 +30,7 @@ Ambiente virtual em `.venv/` (Windows). Ativar ou chamar os binários diretament
 .\.venv\Scripts\python.exe manage.py createsuperuser      # criar usuário do painel de gestão
 .\.venv\Scripts\python.exe manage.py test pauta           # rodar testes (pauta/tests.py)
 .\.venv\Scripts\python.exe manage.py shell                # shell interativo com models carregados
+.\.venv\Scripts\python.exe manage.py criar_pautas_demo     # cria 5 pautas fictícias (1 por diretoria) p/ testar o painel de gestão
 ```
 
 Não rode `python`/`pip` globais — sempre pelo `.venv\Scripts\`. Dependências ficam em
@@ -53,11 +54,21 @@ autenticação/papéis porque o modelo de permissões é só "público" vs. "ass
   `get_or_create` por sigla, então não duplicam se já existirem. **Não editar a migration 0002
   retroativamente** — correções de dados de unidades entram como nova migration (padrão já usado
   na 0004), preservando o histórico.
-- `Reuniao` — data da reunião (sempre sexta-feira). `prazo_submissao` é calculado
-  (`data - 7 dias`), não armazenado. `esta_aberta` combina esse prazo com o campo `status` para
-  decidir se a submissão pública deve ser aceita — essa é a trava de prazo do app inteiro.
-  `Reuniao.proxima_aberta()` é usado tanto no formulário público quanto no painel para achar a
-  reunião "corrente". **Usa `django.utils.timezone.localdate()`, nunca `datetime.date.today()`**
+- `Reuniao` — data da reunião (sempre sexta-feira). `Reuniao.PRAZO_MINIMO_DIAS` (= 4, atributo de
+  classe) define a antecedência mínima para aceitar pauta para aquela reunião. `prazo_submissao`
+  (= `data - PRAZO_MINIMO_DIAS dias`) é calculado, não armazenado. `esta_aberta` combina esse prazo
+  com o campo `status` para decidir se a submissão pública deve ser aceita para aquela reunião
+  específica — essa é a trava de prazo do app inteiro. **Desde 2026-07-08, quem submete pauta
+  escolhe a reunião** (campo `reuniao` de `PautaItemForm`, um `<select>` com todas as reuniões
+  `ABERTA` de data futura, geradas por `garantir_proximas_semanas()`) em vez de ser sempre atrelado
+  à `Reuniao.proxima_aberta()` — a validação da regra dos `PRAZO_MINIMO_DIAS` dias roda em
+  `PautaItemForm.clean_reuniao()`, reaproveitando `esta_aberta`, e rejeita com a mensagem "não há
+  tempo hábil para análise e despacho com o presidente" se a data escolhida for muito próxima. O
+  `<select>` mostra todas as datas (não esconde as fechadas) e anota no texto da opção quando o
+  prazo já encerrou (`ReuniaoChoiceField.label_from_instance`, em `pauta/forms.py`), para dar
+  transparência sobre por que uma sexta específica está bloqueada. `Reuniao.proxima_aberta()`
+  continua existindo, mas agora só é usado em `gestao_painel` (reunião padrão exibida no kanban).
+  **Usa `django.utils.timezone.localdate()`, nunca `datetime.date.today()`**
   para essas comparações — `date.today()` lê o relógio do SO ignorando `TIME_ZONE`, o que gera
   prazo errado (até 3h de diferença) se o servidor rodar em UTC (comum em nuvem). Bug real
   encontrado e corrigido em 2026-07-05; não reintroduzir `date.today()` aqui.
@@ -86,8 +97,9 @@ autenticação/papéis porque o modelo de permissões é só "público" vs. "ass
 
 **Views (`pauta/views.py`)** — cada view corresponde a uma página, sem DRF/API, só forms + templates
 server-side:
-- `nova_pauta` — pública. Bloqueia POST no servidor (não só na UI) se `Reuniao.proxima_aberta()` for
-  `None` ou não estiver `esta_aberta`.
+- `nova_pauta` — pública. Quem submete escolhe a reunião no próprio formulário
+  (`PautaItemForm.reuniao`); o bloqueio pela regra de antecedência mínima (`PRAZO_MINIMO_DIAS`)
+  acontece no servidor, em `PautaItemForm.clean_reuniao()`, não só na UI.
 - `acompanhar` — pública, busca por `email_solicitante` via querystring GET (por design: sem senha,
   então usa GET para ser algo compartilhável/sem CSRF).
 - `gestao_painel`, `gestao_item_editar`, `gestao_pauta_final` — atrás de `@login_required`
@@ -98,6 +110,13 @@ server-side:
   `<a href>`** — desde o Django 5.0, `LogoutView` só aceita POST (`GET` retorna
   `405 Method Not Allowed`). Bug real em produção (Render) encontrado e corrigido em 2026-07-06 —
   o usuário via "HTTP ERROR 405" ao clicar em Sair; não trocar de volta para link simples.
+
+**`pauta/management/commands/criar_pautas_demo.py`** (2026-07-08) cria 5 `PautaItem` fictícios, um
+por diretoria real (Dilic, Diqua, DBFlo, Dipro, Diplan), numa reunião futura que passe na regra de
+`PRAZO_MINIMO_DIAS`, para simular a análise/deliberação no painel de gestão. É uso local/manual
+(mesmo padrão de `ensure_superuser.py`, idempotente via `get_or_create` por `titulo`) e **não** entra
+no `startCommand` do `render.yaml` — rodar em produção poluiria a pauta real do Conselho Gestor com
+dados fictícios.
 
 **Sem envio automático de e-mail** (decisão revertida em 2026-07-05 — chegou a existir uma versão
 com `send_mail`, removida porque não havia SMTP real configurado). Em vez disso,
@@ -112,7 +131,8 @@ estende ele. CSS institucional fica em `static/css/style.css`, carregado via `ST
 Bootstrap 5 e Bootstrap Icons vêm de CDN (jsdelivr) — o app depende de internet para o CSS/JS de
 terceiros, não é self-contained.
 
-**Fluxo ponta a ponta**: submissão pública cria `PautaItem` preso à `Reuniao.proxima_aberta()` →
+**Fluxo ponta a ponta**: submissão pública cria `PautaItem` preso à reunião escolhida pelo
+solicitante (dentre as reuniões abertas com pelo menos `PRAZO_MINIMO_DIAS` dias de antecedência) →
 assessoria vê no kanban de `gestao_painel` (agrupado por `status`) → abre `gestao_item_editar` para
 registrar parecer/decisão e avançar `status` → itens `APROVADA` aparecem em `gestao_pauta_final`
 (página imprimível, ordenada por `ordem_apresentacao`) → o solicitante original confere tudo isso
